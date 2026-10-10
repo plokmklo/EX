@@ -1,0 +1,155 @@
+// EX-IMS — Enterprise Inventory Management System
+// Prisma schema (SQLite portable; enums encoded as validated strings)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  empId        String   @unique
+  email        String   @unique
+  passwordHash String
+  firstName    String
+  lastName     String
+  phone        String?
+  department   String?
+  office       String?
+  // ADMIN | MANAGER | STOREKEEPER | STAFF
+  role         String   @default("STAFF")
+  // ACTIVE | INACTIVE
+  status       String   @default("ACTIVE")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  requests    ItemRequest[]  @relation("Requester")
+  reviewed    ItemRequest[]  @relation("Reviewer")
+  comments    Comment[]
+  audits      AuditLog[]
+  movements   StockMovement[]
+  itemsCreated Item[]        @relation("ItemCreator")
+
+  @@index([role])
+  @@index([status])
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  items Item[]
+
+  @@index([name])
+}
+
+model Item {
+  id            String   @id @default(cuid())
+  code          String   @unique
+  name          String
+  categoryId    String
+  category      Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  brand         String?
+  model         String?
+  serial        String?
+  unit          String   @default("pcs")
+  quantity      Int      @default(0)
+  minStockLevel Int      @default(5)
+  unitPrice     Float    @default(0)
+  location      String?
+  description   String?
+  // AVAILABLE | OUT_OF_STOCK | MAINTENANCE | DISCONTINUED
+  status        String   @default("AVAILABLE")
+  isDeleted     Boolean  @default(false)
+  createdById   String?
+  createdBy     User?    @relation("ItemCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  requests  ItemRequest[]
+  comments  Comment[]
+  movements StockMovement[]
+
+  @@index([categoryId])
+  @@index([name])
+  @@index([status])
+  @@index([isDeleted])
+}
+
+model ItemRequest {
+  id           String    @id @default(cuid())
+  itemId       String
+  item         Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  requesterId  String
+  requester    User      @relation("Requester", fields: [requesterId], references: [id], onDelete: Cascade)
+  quantity     Int
+  reason       String?
+  // PENDING | APPROVED | REJECTED | ISSUED | RETURNED | CANCELLED
+  status       String    @default("PENDING")
+  reviewerId   String?
+  reviewer     User?     @relation("Reviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+  reviewedAt   DateTime?
+  decisionNote String?
+  issuedAt     DateTime?
+  returnedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([status])
+  @@index([itemId])
+  @@index([requesterId])
+  @@index([createdAt])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  itemId    String
+  item      Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([itemId])
+}
+
+model StockMovement {
+  id        String   @id @default(cuid())
+  itemId    String
+  item      Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  // IN | OUT | ADJUST
+  type      String
+  quantity  Int
+  reference String?
+  note      String?
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+
+  @@index([itemId])
+  @@index([createdAt])
+  @@index([type])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  actorName String? // denormalized for resilience
+  action    String
+  entity    String
+  entityId  String?
+  details   String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([entity])
+  @@index([action])
+}

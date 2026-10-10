@@ -95,14 +95,18 @@ export function RequestStockDialog({
                 <FormItem>
                   <FormLabel>Quantity</FormLabel>
                   <FormControl>
-                    <Input type="number" min={1} max={Math.max(1, available)} step={1} {...field} />
+                    <Input type="number" min={1} max={100000} step={1} {...field} />
                   </FormControl>
                   <FormMessage />
-                  {available === 0 && (
-                    <p className="text-xs font-medium text-rose-600 dark:text-rose-400">
-                      This item is currently out of stock — requests may be rejected.
+                  {available === 0 ? (
+                    <p className="text-xs font-medium text-amber-600 dark:text-amber-400">
+                      Out of stock — your request will be routed to the store team as a procurement signal.
                     </p>
-                  )}
+                  ) : field.value > available ? (
+                    <p className="text-xs font-medium text-amber-600 dark:text-amber-400">
+                      Exceeds the {available} {item?.unit} available — the store team will treat this as a restock request.
+                    </p>
+                  ) : null}
                 </FormItem>
               )}
             />

@@ -25,6 +25,7 @@ import {
   UserRoundIcon,
   ChevronsUpDownIcon,
   MonitorIcon,
+  SearchIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -41,6 +42,8 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { dashboardApi, authApi } from '@/lib/ims-client';
 import { RoleBadge, UserAvatar } from './shared';
+import { NotificationBell } from './notification-bell';
+import { CommandPalette, useCommandPaletteShortcut } from './command-palette';
 import type { ImsView, Role, SafeUser } from '@/types/ims';
 import { cn } from '@/lib/utils';
 
@@ -128,15 +131,29 @@ function NavList({
             onClick={() => onNavigate(item.id)}
             aria-current={active ? 'page' : undefined}
             className={cn(
-              'group flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors outline-none',
+              'group relative flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-sm font-medium transition-all outline-none',
               'focus-visible:ring-ring/50 focus-visible:ring-2',
               active
-                ? 'bg-emerald-600/10 text-emerald-700 dark:text-emerald-400'
+                ? 'bg-emerald-600/10 text-emerald-700 shadow-[inset_0_1px_0_rgba(16,185,129,0.08)] dark:text-emerald-400'
                 : 'text-muted-foreground hover:bg-accent hover:text-foreground',
               collapsed && 'justify-center px-0',
             )}
           >
-            <item.icon className={cn('size-4 shrink-0', active && 'text-emerald-600 dark:text-emerald-400')} aria-hidden />
+            {/* active indicator bar */}
+            <span
+              aria-hidden
+              className={cn(
+                'absolute left-0 w-[3px] rounded-r-full bg-emerald-500 transition-all duration-200',
+                active ? 'h-5 opacity-100' : 'h-0 opacity-0',
+              )}
+            />
+            <item.icon
+              className={cn(
+                'size-4 shrink-0 transition-transform group-hover:scale-110',
+                active && 'text-emerald-600 dark:text-emerald-400',
+              )}
+              aria-hidden
+            />
             {!collapsed && <span className="flex-1 text-left">{item.label}</span>}
             {!collapsed && item.id === 'requests' && showPendingBadge && (
               <Badge className="h-5 min-w-5 rounded-full bg-amber-500 px-1.5 text-[10px] font-semibold text-white tabular-nums">
@@ -245,7 +262,7 @@ export function AppShell({
 }: {
   user: SafeUser;
   view: ImsView;
-  onNavigate: (v: ImsView) => void;
+  onNavigate: (v: ImsView, opts?: { inventorySearch?: string }) => void;
   onSignOut: () => Promise<void> | void;
   children: React.ReactNode;
 }) {
@@ -254,7 +271,11 @@ export function AppShell({
   const [collapsed, setCollapsed] = React.useState(false);
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [signingOut, setSigningOut] = React.useState(false);
+  const [paletteOpen, setPaletteOpen] = React.useState(false);
   React.useEffect(() => setMounted(true), []);
+  useCommandPaletteShortcut(
+    React.useCallback(() => setPaletteOpen(true), []),
+  );
 
   // Pending-requests count for badge (staff sees own count on Requests page instead)
   const canSeeBadge = user.role !== 'STAFF';
@@ -286,9 +307,16 @@ export function AppShell({
   };
 
   const dark = mounted && resolvedTheme === 'dark';
+  const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
 
   return (
     <TooltipProviderMaybe>
+      <CommandPalette
+        open={paletteOpen}
+        onOpenChange={setPaletteOpen}
+        user={user}
+        onNavigate={onNavigate}
+      />
       <div className="flex min-h-screen w-full">
         {/* Desktop sidebar */}
         <aside
@@ -348,6 +376,31 @@ export function AppShell({
                 <h1 className="truncate text-base font-semibold tracking-tight sm:text-lg">{VIEW_TITLES[view]}</h1>
                 <p className="text-muted-foreground hidden truncate text-xs sm:block">{FOOTER_NAV[view]}</p>
               </div>
+
+              {/* Global search / command palette trigger */}
+              <button
+                type="button"
+                onClick={() => setPaletteOpen(true)}
+                className="text-muted-foreground border-input bg-muted/40 hover:bg-muted hover:text-foreground hidden h-9 items-center gap-2 rounded-lg border px-3 text-xs transition-colors outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 md:flex lg:w-64"
+                aria-label="Open command palette"
+              >
+                <SearchIcon className="size-3.5" />
+                <span className="flex-1 text-left">Search or jump to…</span>
+                <kbd className="bg-background pointer-events-none rounded border px-1.5 font-mono text-[10px] font-semibold text-muted-foreground">
+                  {isMac ? '⌘' : 'Ctrl'}K
+                </kbd>
+              </button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-9 md:hidden"
+                onClick={() => setPaletteOpen(true)}
+                aria-label="Search"
+              >
+                <SearchIcon className="size-4" />
+              </Button>
+
+              <NotificationBell onNavigate={(target) => onNavigate(target)} />
 
               <ThemeToggle />
 

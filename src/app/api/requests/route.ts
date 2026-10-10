@@ -78,14 +78,9 @@ export const POST = withErrorHandling(async (req: NextRequest) => {
     throw new HttpError(409, "This item is discontinued and cannot be requested");
   }
 
-  const reserved = (await reservedQtyMap([item.id])).get(item.id) ?? 0;
-  const availableQty = Math.max(0, item.quantity - reserved);
-  if (data.quantity > availableQty) {
-    throw new HttpError(
-      409,
-      `Only ${availableQty} ${item.unit} of "${item.name}" currently available (${item.quantity} on hand, ${reserved} reserved)`
-    );
-  }
+  // NOTE: requests may exceed available stock — those are treated as
+  // procurement/restock signals and remain PENDING until stock arrives
+  // (approval re-validates availability; issue enforces it transactionally).
 
   // prevent duplicate identical pending request by same user
   const dup = await db.itemRequest.findFirst({
@@ -105,12 +100,16 @@ export const POST = withErrorHandling(async (req: NextRequest) => {
     },
   });
 
+  const reserved = (await reservedQtyMap([item.id])).get(item.id) ?? 0;
+  const availableQty = Math.max(0, item.quantity - reserved);
+  const isRestockSignal = data.quantity > availableQty;
+
   await audit({
     user: session,
     action: "REQUEST_CREATE",
     entity: "REQUEST",
     entityId: created.id,
-    details: `${session.firstName} ${session.lastName} requested ${data.quantity} ${item.unit} of ${item.name} (${item.code})`,
+    details: `${session.firstName} ${session.lastName} requested ${data.quantity} ${item.unit} of ${item.name} (${item.code})${isRestockSignal ? ` — procurement signal (${availableQty} available)` : ""}`,
   });
 
   return NextResponse.json({ request: { ...created, requester: session } }, { status: 201 });

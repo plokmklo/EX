@@ -6,7 +6,6 @@
  * with client-side view switching (no other routes).
  */
 import * as React from 'react';
-import { create } from 'zustand';
 import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -23,17 +22,7 @@ import { AuditView } from '@/components/ims/audit-view';
 import { SettingsView } from '@/components/ims/settings-view';
 import type { ImsView, SafeUser } from '@/types/ims';
 
-/* ------------------------------ Zustand store ------------------------------ */
-
-interface ImsStore {
-  currentView: ImsView;
-  setView: (v: ImsView) => void;
-}
-
-const useImsStore = create<ImsStore>((set) => ({
-  currentView: 'dashboard',
-  setView: (currentView) => set({ currentView }),
-}));
+import { useImsStore } from '@/lib/ims-store';
 
 /* ------------------------------ View switch ------------------------------ */
 
@@ -71,6 +60,7 @@ function SessionGate() {
   const qc = useQueryClient();
   const currentView = useImsStore((s) => s.currentView);
   const setView = useImsStore((s) => s.setView);
+  const navigateToInventory = useImsStore((s) => s.navigateToInventory);
 
   const { data, isLoading } = useQuery({
     queryKey: ['session'],
@@ -80,6 +70,14 @@ function SessionGate() {
   });
 
   const user = data?.user ?? null;
+
+  const handleNavigate = (v: ImsView, opts?: { inventorySearch?: string }) => {
+    if (v === 'inventory' && opts?.inventorySearch !== undefined) {
+      navigateToInventory(opts.inventorySearch);
+    } else {
+      setView(v);
+    }
+  };
 
   const handleSignedIn = (u: SafeUser) => {
     qc.setQueryData(['session'], { user: u });
@@ -111,7 +109,12 @@ function SessionGate() {
   }
 
   return (
-    <AppShell user={user} view={currentView} onNavigate={setView} onSignOut={handleSignOut}>
+    <AppShell
+      user={user}
+      view={currentView}
+      onNavigate={handleNavigate}
+      onSignOut={handleSignOut}
+    >
       <CurrentView user={user} />
     </AppShell>
   );

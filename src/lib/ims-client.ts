@@ -136,6 +136,7 @@ export const itemsApi = {
       })}`,
     ),
   detail: (id: string) => get<ItemDetailResponse>(`/api/items/${id}`),
+  qr: (id: string) => get<{ svg: string; item: { id: string; code: string; name: string } }>(`/api/items/${id}/qr`),
   create: (body: Record<string, unknown>) => post<{ item: ItemDto }>('/api/items', body),
   update: (id: string, body: Record<string, unknown>) => put<{ item: ItemDto }>(`/api/items/${id}`, body),
   remove: (id: string) => del<{ ok: boolean }>(`/api/items/${id}`),
@@ -214,6 +215,21 @@ export const auditApi = {
         pageSize: f.pageSize ?? 15,
       })}`,
     ),
+};
+
+/* ----------------------------- Notifications ----------------------------- */
+
+export interface NotificationDto {
+  id: string;
+  type: 'REQUEST_UPDATE' | 'REQUEST_PENDING' | 'LOW_STOCK' | 'OUT_OF_STOCK';
+  title: string;
+  body: string;
+  createdAt: string;
+  targetView: 'requests' | 'inventory';
+}
+
+export const notificationsApi = {
+  list: () => get<{ data: NotificationDto[]; total: number }>('/api/notifications'),
 };
 
 export type { MovementType, ItemStatus };

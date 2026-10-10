@@ -5,6 +5,7 @@
  * pagination footer, avatar initials, formatters.
  */
 import * as React from 'react';
+import { motion } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -225,6 +226,7 @@ export function KpiCard({
   tone = 'default',
   hint,
   loading,
+  index = 0,
 }: {
   label: string;
   value: string;
@@ -232,34 +234,63 @@ export function KpiCard({
   tone?: 'default' | 'amber' | 'rose' | 'emerald' | 'violet';
   hint?: string;
   loading?: boolean;
+  /** position for staggered entrance */
+  index?: number;
 }) {
   const toneCls =
     tone === 'amber'
-      ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+      ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 ring-amber-500/25'
       : tone === 'rose'
-        ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400'
+        ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 ring-rose-500/25'
         : tone === 'emerald'
-          ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+          ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 ring-emerald-500/25'
           : tone === 'violet'
-            ? 'bg-violet-500/15 text-violet-600 dark:text-violet-400'
-            : 'bg-zinc-500/10 text-zinc-600 dark:text-zinc-300';
+            ? 'bg-violet-500/15 text-violet-600 dark:text-violet-400 ring-violet-500/25'
+            : 'bg-zinc-500/10 text-zinc-600 dark:text-zinc-300 ring-zinc-500/20';
+  const accentCls =
+    tone === 'amber'
+      ? 'from-amber-500/70'
+      : tone === 'rose'
+        ? 'from-rose-500/70'
+        : tone === 'emerald'
+          ? 'from-emerald-500/70'
+          : tone === 'violet'
+            ? 'from-violet-500/70'
+            : 'from-zinc-400/60';
   return (
-    <div className="bg-card rounded-xl border p-4 shadow-xs transition-shadow hover:shadow-md">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="text-muted-foreground truncate text-xs font-medium">{label}</p>
-          {loading ? (
-            <Skeleton className="mt-1.5 h-7 w-16" />
-          ) : (
-            <p className="mt-1 text-2xl font-semibold tracking-tight tabular-nums">{value}</p>
-          )}
-          {hint && !loading && <p className="text-muted-foreground mt-0.5 text-[11px]">{hint}</p>}
+    <motion.div
+      initial={{ opacity: 0, y: 10, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.35, delay: Math.min(index * 0.05, 0.4), ease: [0.21, 0.6, 0.35, 1] }}
+      className="group bg-card relative overflow-hidden rounded-xl border shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:shadow-emerald-600/5"
+    >
+      {/* tone accent line */}
+      <div
+        aria-hidden
+        className={cn(
+          'absolute inset-x-0 top-0 h-[2.5px] bg-gradient-to-r to-transparent opacity-70 transition-opacity group-hover:opacity-100',
+          accentCls,
+        )}
+      />
+      <div className="flex flex-col gap-1 p-3.5 pt-4 sm:p-4 sm:pt-4.5">
+        <div className="flex items-center gap-2">
+          <span className={cn('flex size-7 shrink-0 items-center justify-center rounded-lg ring-1', toneCls)}>
+            {icon}
+          </span>
+          <p className="text-muted-foreground min-w-0 text-[11px] leading-tight font-medium sm:text-xs">
+            <span className="line-clamp-2">{label}</span>
+          </p>
         </div>
-        <div className={cn('flex size-9 shrink-0 items-center justify-center rounded-lg', toneCls)}>
-          {icon}
-        </div>
+        {loading ? (
+          <Skeleton className="mt-1 h-7 w-16" />
+        ) : (
+          <p className="mt-0.5 pl-0.5 text-xl font-bold tracking-tight tabular-nums sm:text-2xl">{value}</p>
+        )}
+        {hint && !loading && (
+          <p className="text-muted-foreground line-clamp-1 pl-0.5 text-[10.5px] leading-tight">{hint}</p>
+        )}
       </div>
-    </div>
+    </motion.div>
   );
 }
 

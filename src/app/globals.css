@@ -184,3 +184,26 @@ footer.mt-auto {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ------------------------- QR asset label printing ------------------------- */
+/* Isolate the .print-label element when printing: hide everything else. */
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+  .print-label,
+  .print-label * {
+    visibility: visible !important;
+  }
+  .print-label {
+    position: absolute !important;
+    inset: 0 !important;
+    margin: auto !important;
+    width: fit-content !important;
+    height: fit-content !important;
+    box-shadow: none !important;
+  }
+  @page {
+    margin: 1.5cm;
+  }
+}

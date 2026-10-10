@@ -104,3 +104,30 @@ Work Log:
 
 Stage Summary:
 - Repo live at https://github.com/plokmklo/EX (main + v1.0.0 tag)
+
+---
+Task ID: 8 (cron webDevReview round 2)
+Agent: Z.ai Code (main orchestrator)
+Task: QA round 2 + new enterprise features + styling polish
+
+Work Log:
+
+## Current project status description/assessment
+- App healthy (200, zero runtime/console errors after fixes); v1.0.0 already on GitHub
+- QA round 2 confirmed stable baseline, but identified: KPI labels truncate, no notification system, no global search, no asset labels, restock requests blocked by withdrawal-validation
+
+## Current goals/completed modifications/verification results
+1. FIXED: duplicate `setView` declaration in page.tsx (runtime 500) — introduced and immediately removed during store refactor; moved store to dedicated `src/lib/ims-store.ts` (clean architecture, no circular imports)
+2. NEW FEATURE — QR asset labels: `/api/items/[id]/qr` (server-side SVG QR via `qrcode` pkg, payload `EX-IMS|code|name`); "Asset label" button in item details opens printable label preview (EX-IMS branded, QR + name + code + brand/category/location) with `@media print` isolation CSS — browser-verified
+3. NEW FEATURE — Notification center: `/api/notifications` derives alerts from live data (staff: own request updates; others: pending requests + low-stock + out-of-stock); header bell with unread badge (polls 60s), popover with type-colored icons, mark-all-read, click-through navigation, localStorage dismissal — browser-verified (10 alerts rendered)
+4. NEW FEATURE — ⌘K command palette: global Ctrl/Cmd+K + header trigger; live item search (debounced), navigation by role, quick actions (toggle theme, export CSV); selecting an item deep-links to Inventory pre-filtered (via zustand `navigateToInventory` handoff) — browser-verified ("lap" → Dell Latitude → inventory pre-filtered ITM-1001)
+5. NEW FEATURE — Reorder suggestions card on dashboard (reorder-point practice, target 2× min level) with one-click "Restock" request; badge updates reactively
+6. BUG FIX (design): POST /api/requests blocked requests exceeding availableQty — blocked legitimate restock/procurement requests. Now: creation allowed (audit notes "procurement signal"), integrity preserved at approve (409 if insufficient) and issue (transactional). UI dialog warns instead of blocking. Verified: create 8×DVD-writer (0 on hand) → PENDING OK; approve → 409 correct
+7. STYLING: KpiCard redesigned — full labels (no truncation, line-clamp-2), hint captions, tone accent gradient line, icon chips with rings, hover lift, staggered framer-motion entrance; sidebar active indicator bar + icon hover scale; zero blue/indigo palette maintained
+8. Verified end-to-end in browser: restock toast + "Requested" state + badge 2→3; test requests cleaned up after QA; 0 console errors final
+
+## Unresolved issues or risks, and priority recommendations for next phase
+- tsc reports pre-existing scaffold type noise in examples/skills (not part of app; next.config ignores build errors) — safe
+- Notification dismissal is client-side localStorage only (per-browser); consider a Notification read-state model if persistence matters
+- QR encodes item code as plain text; a future scan-to-view deep link (mobile camera → app route) would need a public URL scheme
+- Next: barcode bulk scan check-in/out, email notifications, Postgres migration path, i18n (Amharic) for DBU users

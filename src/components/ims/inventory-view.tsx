@@ -62,6 +62,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { categoriesApi, itemsApi, ApiError } from '@/lib/ims-client';
+import { useImsStore } from '@/lib/ims-store';
 import {
   CategoryBadge,
   EmptyState,
@@ -108,6 +109,17 @@ export function InventoryView({ user }: { user: SafeUser }) {
 
   const [filters, setFilters] = React.useState<Filters>(DEFAULT_FILTERS);
   const [debouncedSearch, setDebouncedSearch] = React.useState('');
+
+  // Consume a search handed off from the ⌘K command palette / notifications
+  const storeSearch = useImsStore((s) => s.inventorySearch);
+  const consumeInventorySearch = useImsStore((s) => s.consumeInventorySearch);
+  React.useEffect(() => {
+    if (!storeSearch) return;
+    const term = consumeInventorySearch();
+    if (term) {
+      setFilters((f) => ({ ...f, search: term, page: 1 }));
+    }
+  }, [storeSearch, consumeInventorySearch]);
 
   // debounce search input
   React.useEffect(() => {

@@ -7,6 +7,7 @@
 import * as React from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { PrinterIcon, QrCodeIcon, XIcon } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -73,13 +74,124 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
+/**
+ * Printable QR asset label (Snipe-IT-style). Screen: live preview overlay.
+ * Print: `@media print` rules in globals.css isolate `.print-label`.
+ */
+function AssetLabelPrint({
+  item,
+  svg,
+  onClose,
+}: {
+  item: ItemDto;
+  svg: string;
+  onClose: () => void;
+}) {
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-[999]" role="dialog" aria-label="Print asset label">
+      {/* screen-only backdrop + preview */}
+      <div className="print:hidden absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black/60 p-6 backdrop-blur-sm">
+        <div className="animate-in fade-in zoom-in-95 relative rounded-xl bg-white p-6 shadow-2xl duration-200">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close label preview"
+            className="absolute top-2 right-2 rounded-md p-1 text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
+          >
+            <XIcon className="size-4" />
+          </button>
+          {/* label body (matches printed output) */}
+          <div className="print-label bg-white">
+            <div className="flex items-center justify-between border-b-2 border-zinc-900 pb-1.5">
+              <span className="text-sm font-black tracking-tight text-zinc-900">EX-IMS</span>
+              <span className="text-[9px] font-semibold tracking-widest text-zinc-500 uppercase">Asset label</span>
+            </div>
+            <div className="mt-2 flex items-start gap-3">
+              <div className="size-24 shrink-0 [&>svg]:size-full" dangerouslySetInnerHTML={{ __html: svg }} aria-hidden />
+              <div className="min-w-0 pt-1">
+                <p className="max-w-44 text-[13px] leading-tight font-bold text-zinc-900">{item.name}</p>
+                <p className="mt-0.5 font-mono text-[11px] font-semibold text-zinc-600">{item.code}</p>
+                <p className="mt-1 max-w-44 text-[9px] leading-snug text-zinc-500">
+                  {item.brand ? `${item.brand} · ` : ''}
+                  {item.category.name}
+                  {item.location ? ` · ${item.location}` : ''}
+                </p>
+                <p className="mt-1 text-[8px] text-zinc-400">Scan to identify · EX-IMS Enterprise Inventory</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button className="bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => window.print()}>
+            <PrinterIcon className="size-4" /> Print label
+          </Button>
+          <Button variant="outline" className="border-zinc-700 bg-transparent text-white hover:bg-zinc-800" onClick={onClose}>
+            Close
+          </Button>
+        </div>
+        <p className="max-w-sm text-center text-xs text-zinc-400">
+          Tip: print on adhesive paper and attach to the physical asset — the QR encodes the item code for instant lookup.
+        </p>
+      </div>
+      {/* print-only clone of the label, centered on the page */}
+      <div className="print-label hidden print:block print:absolute print:inset-0 print:m-auto print:h-fit print:w-fit print:bg-white print:p-8">
+        <div className="flex items-center justify-between border-b-2 border-zinc-900 pb-1.5">
+          <span className="text-sm font-black tracking-tight text-zinc-900">EX-IMS</span>
+          <span className="text-[9px] font-semibold tracking-widest text-zinc-500 uppercase">Asset label</span>
+        </div>
+        <div className="mt-2 flex items-start gap-3">
+          <div className="size-24 shrink-0 [&>svg]:size-full" dangerouslySetInnerHTML={{ __html: svg }} aria-hidden />
+          <div className="min-w-0 pt-1">
+            <p className="max-w-44 text-[13px] leading-tight font-bold text-zinc-900">{item.name}</p>
+            <p className="mt-0.5 font-mono text-[11px] font-semibold text-zinc-600">{item.code}</p>
+            <p className="mt-1 max-w-44 text-[9px] leading-snug text-zinc-500">
+              {item.brand ? `${item.brand} · ` : ''}
+              {item.category.name}
+              {item.location ? ` · ${item.location}` : ''}
+            </p>
+            <p className="mt-1 text-[8px] text-zinc-400">Scan to identify · EX-IMS Enterprise Inventory</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Overview({ item }: { item: ItemDto }) {
+  const [labelOpen, setLabelOpen] = React.useState(false);
+  const { data: qrData } = useQuery({
+    queryKey: ['item-qr', item.id],
+    queryFn: () => itemsApi.qr(item.id),
+    staleTime: 5 * 60_000,
+  });
+
   return (
     <div className="space-y-5">
+      {labelOpen && qrData && (
+        <AssetLabelPrint item={item} svg={qrData.svg} onClose={() => setLabelOpen(false)} />
+      )}
       <div className="flex flex-wrap items-center gap-2">
         <ItemStatusBadge status={item.status} />
         <CategoryBadge name={item.category.name} />
         <Badge variant="outline" className="font-mono text-[11px]">{item.code}</Badge>
+        <Button
+          size="sm"
+          variant="outline"
+          className="ml-auto h-7 text-[11px]"
+          onClick={() => setLabelOpen(true)}
+          disabled={!qrData}
+          title="Print a QR asset label for this item"
+        >
+          <QrCodeIcon className="size-3.5" /> Asset label
+        </Button>
       </div>
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
         <Field label="Quantity" value={<span className="font-semibold tabular-nums">{item.quantity} {item.unit}</span>} />

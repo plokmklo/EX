@@ -89,3 +89,18 @@ Work Log:
 Stage Summary:
 - All core flows browser-verified; one bug found and fixed
 - App is production-ready for push
+
+---
+Task ID: 7
+Agent: Z.ai Code (main orchestrator)
+Task: Push EX-IMS to GitHub repo "EX"
+
+Work Log:
+- Created repo plokmklo/EX via GitHub API (public, with description)
+- Wrote professional README.md (features, architecture, permission matrix, demo accounts, setup) + MIT LICENSE + .env.example
+- Updated .gitignore (db files, uploads, dev.pid, .zscripts artifacts) and cleaned staging
+- Committed all 124 files as v1.0.0, pushed main branch + v1.0.0 annotated tag
+- Removed token from git remote URL for security hygiene
+
+Stage Summary:
+- Repo live at https://github.com/plokmklo/EX (main + v1.0.0 tag)
